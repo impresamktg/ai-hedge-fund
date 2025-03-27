@@ -38,31 +38,30 @@ def call_llm(
 
     # Handle different model requirements for structured output
     if model_info and model_info.provider == "OpenAI":
-        system_message = f"""You are a financial analysis assistant that MUST respond in valid JSON format.
-        Expected schema: {pydantic_model.schema_json()}
-        CRITICAL: Your entire response must be valid JSON only. No other text or markdown."""
-        messages = [{"role": "system", "content": system_message}]
-        if isinstance(prompt, str):
-            messages.append({"role": "user", "content": prompt})
-        else:
-            messages.extend(prompt)
+        schema = pydantic_model.schema()
+        prompt_template = f"""You are a financial analysis assistant. Your response must be VALID JSON matching this schema:
+        {json.dumps(schema, indent=2)}
+        
+        Respond ONLY with the JSON object, no other text. The JSON must be valid and match the schema exactly.
+        
+        Your task: {prompt}"""
+        
         llm = ChatOpenAI(model=model_name, temperature=0)
-        response = llm.invoke(messages)
-        try:
-            if isinstance(response.content, str):
-                # Clean up any potential markdown formatting
+        messages = [{"role": "system", "content": prompt_template}]
+        
+        for _ in range(3):  # Try up to 3 times
+            try:
+                response = llm.invoke(messages)
                 content = response.content.strip()
-                if content.startswith("```json"):
-                    content = content[7:]
-                if content.endswith("```"):
-                    content = content[:-3]
-                content = content.strip()
+                # Parse JSON from the response
                 result = json.loads(content)
-            else:
-                result = response.content
-            return pydantic_model.model_validate(result)
-        except json.JSONDecodeError:
-            raise ValueError("Failed to parse LLM response as JSON")
+                # Validate against the model
+                return pydantic_model.model_validate(result)
+            except (json.JSONDecodeError, ValueError) as e:
+                continue
+        
+        # If we get here, all attempts failed
+        return pydantic_model.model_validate({})  # Return empty model
     else:
         llm = llm.with_structured_output(
             pydantic_model,
