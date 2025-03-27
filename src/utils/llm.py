@@ -38,13 +38,22 @@ def call_llm(
     
     # Handle different model requirements for structured output
     if model_info and model_info.provider == "OpenAI":
-        system_message = f"You must respond with valid JSON that matches this Pydantic model: {pydantic_model.schema_json()}"
+        system_message = f"""You must respond with valid JSON that matches this Pydantic model: {pydantic_model.schema_json()}
+        IMPORTANT: Respond ONLY with the JSON, no other text."""
         messages = [{"role": "system", "content": system_message}]
         if isinstance(prompt, str):
             messages.append({"role": "user", "content": prompt})
         else:
             messages.extend(prompt)
-        llm = ChatOpenAI(model=model_name)
+        llm = ChatOpenAI(model=model_name, temperature=0)
+        response = llm.invoke(messages)
+        try:
+            # Parse the response content as JSON
+            result = json.loads(response.content)
+            return result
+        except json.JSONDecodeError:
+            raise ValueError("Failed to parse LLM response as JSON")
+    else:
     else:
         llm = llm.with_structured_output(
             pydantic_model,
