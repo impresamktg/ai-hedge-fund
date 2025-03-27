@@ -34,9 +34,10 @@ def analyze():
         if not model_choice:
             return jsonify({"error": "No model selected"}), 400
 
-        # Initialize portfolio
+        # Initialize portfolio with user-specified investment amount
+        initial_capital = float(data.get('initial_capital', 100000))
         portfolio = {
-            "cash": float(data.get('initial_capital', 100000)),
+            "cash": initial_capital,
             "margin_requirement": float(data.get('margin_requirement', 0.0)),
             "positions": {ticker: {"long": 0, "short": 0, "long_cost_basis": 0.0, "short_cost_basis": 0.0} for ticker in tickers},
             "realized_gains": {ticker: {"long": 0.0, "short": 0.0} for ticker in tickers}
