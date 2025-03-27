@@ -48,13 +48,18 @@ def call_llm(
         llm = ChatOpenAI(model=model_name, temperature=0)
         response = llm.invoke(messages)
         try:
-            # For OpenAI, we need to parse the response content
             if isinstance(response.content, str):
-                result = json.loads(response.content)
+                # Clean up any potential markdown formatting
+                content = response.content.strip()
+                if content.startswith("```json"):
+                    content = content[7:]
+                if content.endswith("```"):
+                    content = content[:-3]
+                content = content.strip()
+                result = json.loads(content)
             else:
                 result = response.content
-            # Verify the result matches expected schema before returning
-            return pydantic_model.parse_obj(result)
+            return pydantic_model.model_validate(result)
         except json.JSONDecodeError:
             raise ValueError("Failed to parse LLM response as JSON")
     else:
