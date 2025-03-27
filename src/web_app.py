@@ -18,10 +18,24 @@ def index():
 
 @app.route('/analyze', methods=['POST'])
 def analyze():
-    data = request.json
-    tickers = [t.strip() for t in data['tickers'].split(',')]
-    selected_analysts = data['analysts']
-    model_choice = data['model']
+    try:
+        data = request.json
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+            
+        tickers = [t.strip() for t in data.get('tickers', '').split(',')]
+        if not tickers or tickers[0] == '':
+            return jsonify({"error": "No tickers provided"}), 400
+            
+        selected_analysts = data.get('analysts', [])
+        if not selected_analysts:
+            return jsonify({"error": "No analysts selected"}), 400
+            
+        model_choice = data.get('model')
+        if not model_choice:
+            return jsonify({"error": "No model selected"}), 400
+            
+        print(f"Processing request - Tickers: {tickers}, Analysts: {selected_analysts}, Model: {model_choice}")
     
     # Initialize portfolio
     portfolio = {

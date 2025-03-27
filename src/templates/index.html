@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -11,30 +10,30 @@
             --primary-color: #2563eb;
             --secondary-color: #475569;
         }
-        
+
         body {
             background-color: #f8fafc;
             font-family: 'Inter', -apple-system, sans-serif;
         }
-        
+
         .container {
             max-width: 1000px;
             padding: 2rem;
         }
-        
+
         .card {
             border: none;
             border-radius: 16px;
             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
             background: white;
         }
-        
+
         .form-control, .form-select {
             border-radius: 8px;
             border: 1px solid #e2e8f0;
             padding: 0.75rem;
         }
-        
+
         .btn-primary {
             background-color: var(--primary-color);
             border: none;
@@ -42,14 +41,14 @@
             border-radius: 8px;
             font-weight: 500;
         }
-        
+
         .analyst-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
             gap: 1rem;
             margin-top: 1rem;
         }
-        
+
         .analyst-check {
             display: flex;
             align-items: center;
@@ -59,11 +58,11 @@
             cursor: pointer;
             transition: all 0.2s;
         }
-        
+
         .analyst-check:hover {
             background: #e2e8f0;
         }
-        
+
         .loading-overlay {
             position: fixed;
             top: 0;
@@ -76,7 +75,7 @@
             align-items: center;
             z-index: 1000;
         }
-        
+
         .loading-spinner {
             width: 50px;
             height: 50px;
@@ -85,34 +84,37 @@
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
-        
+
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        
+
         #resultsContent {
             margin-top: 2rem;
         }
-        
+
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 1rem;
             margin-top: 1rem;
         }
-        
+
         .stat-card {
             background: #f8fafc;
             padding: 1rem;
             border-radius: 8px;
             text-align: center;
         }
-        
+
         .stat-value {
             font-size: 1.5rem;
             font-weight: 600;
             color: var(--primary-color);
+        }
+        .results-container {
+            margin-top: 1rem;
         }
     </style>
 </head>
@@ -161,7 +163,7 @@
                 </form>
             </div>
         </div>
-        
+
         <div id="resultsContent" class="card mt-4" style="display: none;">
             <div class="card-body">
                 <h3 class="text-center mb-4">Analysis Results</h3>
@@ -193,19 +195,19 @@
         const today = new Date();
         const lastYear = new Date();
         lastYear.setFullYear(today.getFullYear() - 1);
-        
+
         document.getElementById('end_date').value = today.toISOString().split('T')[0];
         document.getElementById('start_date').value = lastYear.toISOString().split('T')[0];
-        
+
         document.getElementById('analysisForm').addEventListener('submit', function(e) {
             e.preventDefault();
-            
+
             const loadingOverlay = document.getElementById('loadingOverlay');
             loadingOverlay.style.display = 'flex';
-            
+
             const selectedAnalysts = Array.from(document.querySelectorAll('input[name="analysts"]:checked'))
                 .map(cb => cb.value);
-            
+
             const formData = {
                 tickers: document.getElementById('tickers').value,
                 start_date: document.getElementById('start_date').value,
@@ -213,7 +215,7 @@
                 analysts: selectedAnalysts,
                 model: document.getElementById('model').value
             };
-            
+
             fetch('/analyze', {
                 method: 'POST',
                 headers: {
@@ -221,27 +223,33 @@
                 },
                 body: JSON.stringify(formData)
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 loadingOverlay.style.display = 'none';
-                document.getElementById('resultsContent').style.display = 'block';
-                // Update stats and plot with the response data
-                if(data.metrics) {
-                    document.getElementById('totalReturn').textContent = 
-                        (data.metrics.total_return * 100).toFixed(2) + '%';
-                    document.getElementById('sharpeRatio').textContent = 
-                        data.metrics.sharpe_ratio.toFixed(2);
-                    document.getElementById('maxDrawdown').textContent = 
-                        (data.metrics.max_drawdown * 100).toFixed(2) + '%';
+                if (data.error) {
+                    alert(data.error);
+                    return;
                 }
-                if(data.plot) {
+                const resultsDiv = document.getElementById('resultsContent');
+                resultsDiv.innerHTML = `
+                    <div class="results-container">
+                        <h4>Analysis Results:</h4>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    </div>
+                `;
+                if (data.plot) {
                     document.getElementById('plot').innerHTML = data.plot;
                 }
             })
             .catch(error => {
                 loadingOverlay.style.display = 'none';
                 console.error('Error:', error);
-                alert('An error occurred during analysis');
+                alert('An error occurred during analysis. Please check the console for details.');
             });
         });
     </script>
