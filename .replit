@@ -5,7 +5,7 @@ run = "analyze"
 channel = "stable-24_05"
 
 [deployment]
-run = ["sh", "-c", "analyze"]
+run = ["sh", "-c", "python src/web_app.py"]
 
 [workflows]
 runButton = "Web App"
