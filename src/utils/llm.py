@@ -38,8 +38,9 @@ def call_llm(
 
     # Handle different model requirements for structured output
     if model_info and model_info.provider == "OpenAI":
-        system_message = f"""You must respond with valid JSON that matches this Pydantic model: {pydantic_model.schema_json()}
-        IMPORTANT: Respond ONLY with the JSON, no other text."""
+        system_message = f"""You are a financial analysis assistant that MUST respond in valid JSON format.
+        Expected schema: {pydantic_model.schema_json()}
+        CRITICAL: Your entire response must be valid JSON only. No other text or markdown."""
         messages = [{"role": "system", "content": system_message}]
         if isinstance(prompt, str):
             messages.append({"role": "user", "content": prompt})
