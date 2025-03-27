@@ -36,8 +36,16 @@ def call_llm(
     model_info = get_model_info(model_name)
     llm = get_model(model_name, model_provider)
     
-    # For non-JSON support models, we can use structured output
-    if not (model_info and not model_info.has_json_mode()):
+    # Handle different model requirements for structured output
+    if model_info and model_info.provider == "OpenAI":
+        system_message = f"You must respond with valid JSON that matches this Pydantic model: {pydantic_model.schema_json()}"
+        messages = [{"role": "system", "content": system_message}]
+        if isinstance(prompt, str):
+            messages.append({"role": "user", "content": prompt})
+        else:
+            messages.extend(prompt)
+        llm = ChatOpenAI(model=model_name)
+    else:
         llm = llm.with_structured_output(
             pydantic_model,
             method="json_mode",
