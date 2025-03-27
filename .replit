@@ -6,3 +6,15 @@ channel = "stable-24_05"
 
 [deployment]
 run = ["sh", "-c", "analyze"]
+
+[workflows]
+runButton = "Web App"
+
+[[workflows.workflow]]
+name = "Web App"
+author = 40603172
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python src/web_app.py"
