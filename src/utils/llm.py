@@ -1,36 +1,27 @@
 """Helper functions for LLM"""
 
 import json
-from typing import TypeVar, Type, Optional, Any
+import os
+from typing import TypeVar, Type, Optional, Any, Callable
 from pydantic import BaseModel
 from utils.progress import progress
 
 T = TypeVar('T', bound=BaseModel)
 
 def call_llm(
-    prompt: Any,
+    prompt: str | list,
     model_name: str,
     model_provider: str,
-    pydantic_model: Type[T],
-    agent_name: Optional[str] = None,
-    max_retries: int = 3,
-    default_factory = None
-) -> T:
-    """
-    Makes an LLM call with retry logic, handling both Deepseek and non-Deepseek models.
-
-    Args:
-        prompt: The prompt to send to the LLM
-        model_name: Name of the model to use
-        model_provider: Provider of the model
-        pydantic_model: The Pydantic model class to structure the output
-        agent_name: Optional name of the agent for progress updates
-        max_retries: Maximum number of retries (default: 3)
-        default_factory: Optional factory function to create default response on failure
-
-    Returns:
-        An instance of the specified Pydantic model
-    """
+    pydantic_model: Type[BaseModel],
+    agent_name: str = None,
+    default_factory: Callable = None,
+) -> Any:
+    print(f"\nDEBUG: LLM Call")
+    print(f"DEBUG: Model Name = {model_name}")
+    print(f"DEBUG: Model Provider = {model_provider}")
+    print(f"DEBUG: Agent Name = {agent_name}")
+    print(f"DEBUG: OpenAI API Key = {'Set' if os.getenv('OPENAI_API_KEY') else 'Not Set'}")
+    print(f"DEBUG: Pydantic Model = {pydantic_model.__name__}")
     from llm.models import get_model, get_model_info
 
     model_info = get_model_info(model_name)
@@ -41,25 +32,40 @@ def call_llm(
         schema = pydantic_model.schema()
         prompt_template = f"""You are a financial analysis assistant. Your response must be VALID JSON matching this schema:
         {json.dumps(schema, indent=2)}
-        
+
         Respond ONLY with the JSON object, no other text. The JSON must be valid and match the schema exactly.
-        
+
         Your task: {prompt}"""
-        
+
         llm = ChatOpenAI(model=model_name, temperature=0)
         messages = [{"role": "system", "content": prompt_template}]
-        
+
         for _ in range(3):  # Try up to 3 times
             try:
                 response = llm.invoke(messages)
-                content = response.content.strip()
-                # Parse JSON from the response
-                result = json.loads(content)
-                # Validate against the model
+                print(f"\nDEBUG: Raw Response Content = {response.content}")
+                if isinstance(response.content, str):
+                    # Clean up any potential markdown formatting
+                    content = response.content.strip()
+                    if content.startswith("```json"):
+                        content = content[7:]
+                    if content.endswith("```"):
+                        content = content[:-3]
+                    content = content.strip()
+                    print(f"DEBUG: Cleaned Content = {content}")
+                    result = json.loads(content)
+                    print(f"DEBUG: Parsed JSON = {result}")
+                else:
+                    result = response.content
+                    print(f"DEBUG: Direct Content = {result}")
                 return pydantic_model.model_validate(result)
-            except (json.JSONDecodeError, ValueError) as e:
+            except json.JSONDecodeError as e:
+                print(f"DEBUG: JSON Decode Error = {str(e)}")
                 continue
-        
+            except Exception as e:
+                print(f"DEBUG: Unexpected Error = {str(e)}")
+                continue
+
         # If we get here, all attempts failed
         return pydantic_model.model_validate({})  # Return empty model
     else:
