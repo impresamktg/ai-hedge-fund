@@ -40,7 +40,7 @@ def call_llm(
         prompt_template = f"""You are a financial analysis assistant. Your response must be VALID JSON matching this schema:
         {json.dumps(schema, indent=2)}
 
-        Respond ONLY with the JSON object, no other text. The JSON must be valid and match the schema exactly.
+        Respond ONLY with the JSON object wrapped in triple backticks, no other text. The JSON must be valid and match the schema exactly.
 
         Your task: {prompt}"""
 
@@ -97,10 +97,7 @@ def call_llm(
         return pydantic_model.model_validate({})  # Return empty model
     else:
         try:
-            llm = llm.with_structured_output(
-                pydantic_model,
-                method="json_mode",
-            )
+            llm = ChatOpenAI(model=model_name, temperature=0)
             #This part is highly likely to be wrong, because the original code has a problem
             # Call the LLM with retries - This part is completely guessed
             for attempt in range(3): #Assumed max_retries = 3
