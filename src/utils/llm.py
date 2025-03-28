@@ -63,13 +63,16 @@ def call_llm(
                 print(f"\nDEBUG: Raw Response Content = {response.content}")
                 print(f"DEBUG: Response Type = {type(response.content)}")
 
-                if isinstance(response.content, str):
-                    content = response.content.strip()
-                    if content.startswith("```json"):
-                        content = content[7:]
-                    if content.endswith("```"):
-                        content = content[:-3]
+                # Handle the response content
+                content = response.content
+                if isinstance(content, str):
                     content = content.strip()
+                    # Extract JSON from markdown code blocks if present
+                    if "```" in content:
+                        import re
+                        json_match = re.search(r'```(?:json)?(.*?)```', content, re.DOTALL)
+                        if json_match:
+                            content = json_match.group(1).strip()
                     print(f"DEBUG: Cleaned Content = {content}")
 
                     try:
