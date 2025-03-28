@@ -26,11 +26,18 @@ def call_llm(
     print(f"DEBUG: OpenAI API Key = {'Set' if os.getenv('OPENAI_API_KEY') else 'Not Set'}")
     print(f"DEBUG: Pydantic Model = {pydantic_model.__name__}")
     print(f"DEBUG: Prompt = {prompt}")  # Print the entire prompt
-    from llm.models import get_model, get_model_info
+    from llm.models import get_model_info
+    from langchain_google_genai import ChatGoogleGenerativeAI
 
     model_info = get_model_info(model_name)
     try:
-        llm = get_model(model_name, model_provider)
+        if model_info.provider == ModelProvider.GEMINI:
+            llm = ChatGoogleGenerativeAI(model=model_name, temperature=0)
+        elif model_info.provider == ModelProvider.OPENAI:
+            llm = ChatOpenAI(model=model_name, temperature=0)
+        else:
+            print(f"DEBUG: Unsupported model provider: {model_info.provider}")
+            return create_default_response(pydantic_model)
         print("DEBUG: LLM client initialized successfully")
     except Exception as e:
         print(f"DEBUG: Error initializing LLM client: {str(e)}")
