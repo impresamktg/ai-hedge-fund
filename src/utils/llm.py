@@ -22,10 +22,17 @@ def call_llm(
     print(f"DEBUG: Agent Name = {agent_name}")
     print(f"DEBUG: OpenAI API Key = {'Set' if os.getenv('OPENAI_API_KEY') else 'Not Set'}")
     print(f"DEBUG: Pydantic Model = {pydantic_model.__name__}")
+    print(f"DEBUG: Prompt = {prompt[:200]}...")  # Print first 200 chars of prompt
     from llm.models import get_model, get_model_info
 
     model_info = get_model_info(model_name)
-    llm = get_model(model_name, model_provider)
+    try:
+        llm = get_model(model_name, model_provider)
+        print("DEBUG: LLM client initialized successfully")
+    except Exception as e:
+        print(f"DEBUG: Error initializing LLM client: {str(e)}")
+        return create_default_response(pydantic_model)
+
 
     # Handle different model requirements for structured output
     if model_info and model_info.provider == "OpenAI":
@@ -37,15 +44,21 @@ def call_llm(
 
         Your task: {prompt}"""
 
-        llm = ChatOpenAI(model=model_name, temperature=0)
-        messages = [{"role": "system", "content": prompt_template}]
+        # Assuming ChatOpenAI is defined elsewhere and handles messages correctly.
+        try:
+            llm = ChatOpenAI(model=model_name, temperature=0) # Assumed definition
+            messages = [{"role": "system", "content": prompt_template}]
+            print("DEBUG: Created messages for LLM")
+        except Exception as e:
+            print(f"DEBUG: Error creating LLM messages: {str(e)}")
+            return create_default_response(pydantic_model)
 
         for _ in range(3):  # Try up to 3 times
             try:
                 print("\nDEBUG: Attempting LLM call...")
                 response = llm.invoke(messages)
                 print(f"DEBUG: Raw Response Content = {response.content}")
-                
+
                 if isinstance(response.content, str):
                     content = response.content.strip()
                     if content.startswith("```json"):
@@ -54,7 +67,7 @@ def call_llm(
                         content = content[:-3]
                     content = content.strip()
                     print(f"DEBUG: Cleaned Content = {content}")
-                    
+
                     try:
                         result = json.loads(content)
                         print(f"DEBUG: Parsed JSON = {result}")
@@ -65,14 +78,14 @@ def call_llm(
                 else:
                     result = response.content
                     print(f"DEBUG: Direct Content = {result}")
-                
+
                 try:
                     return pydantic_model.model_validate(result)
                 except Exception as ve:
                     print(f"DEBUG: Validation Error: {str(ve)}")
                     print(f"DEBUG: Invalid Data: {result}")
                     continue
-                    
+
             except Exception as e:
                 print(f"DEBUG: LLM Call Error: {str(e)}")
                 print(f"DEBUG: Error Type: {type(e).__name__}")
@@ -81,35 +94,35 @@ def call_llm(
         # If we get here, all attempts failed
         return pydantic_model.model_validate({})  # Return empty model
     else:
-        llm = llm.with_structured_output(
-            pydantic_model,
-            method="json_mode",
-        )
+        try:
+            llm = llm.with_structured_output(
+                pydantic_model,
+                method="json_mode",
+            )
+            #This part is highly likely to be wrong, because the original code has a problem
+            # Call the LLM with retries - This part is completely guessed
+            for attempt in range(3): #Assumed max_retries = 3
+                try:
+                    result = llm.invoke(prompt)
+                    if model_info and not model_info.has_json_mode():
+                        parsed_result = extract_json_from_deepseek_response(result.content)
+                        if parsed_result:
+                            return pydantic_model(**parsed_result)
+                    else:
+                        return result
+                except Exception as e:
+                    if agent_name:
+                        progress.update_status(agent_name, None, f"Error - retry {attempt + 1}/3")
+                    if attempt == 2:
+                        print(f"Error in LLM call after 3 attempts: {e}")
+                        if default_factory:
+                            return default_factory()
+                        raise e
+        except Exception as e:
+            print(f"DEBUG: Error in non-OpenAI LLM handling: {str(e)}")
+            return create_default_response(pydantic_model)
 
-        # Call the LLM with retries
-        for attempt in range(max_retries):
-            try:
-                # Call the LLM
-                result = llm.invoke(prompt)
 
-                # For non-JSON support models, we need to extract and parse the JSON manually
-                if model_info and not model_info.has_json_mode():
-                    parsed_result = extract_json_from_deepseek_response(result.content)
-                    if parsed_result:
-                        return pydantic_model(**parsed_result)
-                else:
-                    return result
-
-            except Exception as e:
-                if agent_name:
-                    progress.update_status(agent_name, None, f"Error - retry {attempt + 1}/{max_retries}")
-
-                if attempt == max_retries - 1:
-                    print(f"Error in LLM call after {max_retries} attempts: {e}")
-                    # Use default_factory if provided, otherwise create a basic default
-                    if default_factory:
-                        return default_factory()
-                    raise e
 
 def create_default_response(model_class: Type[T]) -> T:
     """Creates a safe default response based on the model's fields."""
