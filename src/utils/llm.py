@@ -107,18 +107,30 @@ def call_llm(
         return pydantic_model.model_validate({})  # Return empty model
     else:
         try:
-            llm = ChatOpenAI(model=model_name, temperature=0)
-            #This part is highly likely to be wrong, because the original code has a problem
-            # Call the LLM with retries - This part is completely guessed
-            for attempt in range(3): #Assumed max_retries = 3
+            if model_info.provider == ModelProvider.GEMINI:
+                llm = ChatGoogleGenerativeAI(model=model_name, temperature=0)
+            else:
+                llm = ChatOpenAI(model=model_name, temperature=0)
+                
+            for attempt in range(3):
                 try:
-                    result = llm.invoke(prompt)
-                    if model_info and not model_info.has_json_mode():
-                        parsed_result = extract_json_from_deepseek_response(result.content)
-                        if parsed_result:
-                            return pydantic_model(**parsed_result)
-                    else:
-                        return result
+                    response = llm.invoke(messages)
+                    content = response.content
+                    
+                    if isinstance(content, str):
+                        if model_info and not model_info.has_json_mode():
+                            try:
+                                # Try to parse JSON directly first
+                                json_data = json.loads(content)
+                                return pydantic_model(**json_data)
+                            except json.JSONDecodeError:
+                                # If direct parsing fails, try to extract JSON from the response
+                                import re
+                                json_match = re.search(r'```(?:json)?(.*?)```', content, re.DOTALL)
+                                if json_match:
+                                    content = json_match.group(1).strip()
+                                    return pydantic_model(**json.loads(content))
+                    return content
                 except Exception as e:
                     if agent_name:
                         progress.update_status(agent_name, None, f"Error - retry {attempt + 1}/3")
