@@ -5,11 +5,10 @@ import os
 from typing import TypeVar, Type, Optional, Any, Callable
 from pydantic import BaseModel
 from utils.progress import progress
+from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_openai import ChatOpenAI
 
 T = TypeVar('T', bound=BaseModel)
-
-from langchain_openai import ChatOpenAI
-from langchain.schema import SystemMessage, HumanMessage
 
 def call_llm(
     prompt: str | list,
@@ -31,12 +30,17 @@ def call_llm(
 
     model_info = get_model_info(model_name)
     try:
-        messages = prompt if isinstance(prompt, list) else [HumanMessage(content=prompt)]
+        if isinstance(prompt, list):
+            messages = prompt
+        else:
+            messages = [HumanMessage(content=str(prompt))]
         
         if model_info.provider == ModelProvider.GEMINI:
             llm = ChatGoogleGenerativeAI(model=model_name, temperature=0)
+            response = llm.invoke(messages)
         elif model_info.provider == ModelProvider.OPENAI:
             llm = ChatOpenAI(model=model_name, temperature=0)
+            response = llm.invoke(messages)
         else:
             print(f"DEBUG: Unsupported model provider: {model_info.provider}")
             return create_default_response(pydantic_model)
