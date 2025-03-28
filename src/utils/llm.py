@@ -8,6 +8,8 @@ from utils.progress import progress
 
 T = TypeVar('T', bound=BaseModel)
 
+from langchain_openai import ChatOpenAI
+
 def call_llm(
     prompt: str | list,
     model_name: str,
