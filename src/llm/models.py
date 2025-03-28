@@ -11,10 +11,8 @@ from typing import Tuple
 
 class ModelProvider(str, Enum):
     """Enum for supported LLM providers"""
-    ANTHROPIC = "Anthropic"
     DEEPSEEK = "DeepSeek"
     GEMINI = "Gemini"
-    GROQ = "Groq"
     OPENAI = "OpenAI"
 
 
@@ -45,21 +43,6 @@ class LLMModel(BaseModel):
 # Define available models
 AVAILABLE_MODELS = [
     LLMModel(
-        display_name="[anthropic] claude-3.5-haiku",
-        model_name="claude-3-5-haiku-latest",
-        provider=ModelProvider.ANTHROPIC
-    ),
-    LLMModel(
-        display_name="[anthropic] claude-3.5-sonnet",
-        model_name="claude-3-5-sonnet-latest",
-        provider=ModelProvider.ANTHROPIC
-    ),
-    LLMModel(
-        display_name="[anthropic] claude-3.7-sonnet",
-        model_name="claude-3-7-sonnet-latest",
-        provider=ModelProvider.ANTHROPIC
-    ),
-    LLMModel(
         display_name="[deepseek] deepseek-r1",
         model_name="deepseek-reasoner",
         provider=ModelProvider.DEEPSEEK
@@ -78,11 +61,6 @@ AVAILABLE_MODELS = [
         display_name="[gemini] gemini-2.0-pro",
         model_name="gemini-2.0-pro-exp-02-05",
         provider=ModelProvider.GEMINI
-    ),
-    LLMModel(
-        display_name="[groq] llama-3.3 70b",
-        model_name="llama-3.3-70b-versatile",
-        provider=ModelProvider.GROQ
     ),
     LLMModel(
         display_name="[openai] gpt-4.5",
