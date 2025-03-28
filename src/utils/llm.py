@@ -30,17 +30,18 @@ def call_llm(
 
     model_info = get_model_info(model_name)
     try:
-        if isinstance(prompt, list):
-            messages = prompt
-        else:
-            messages = [HumanMessage(content=str(prompt))]
-        
         if model_info.provider == ModelProvider.GEMINI:
             llm = ChatGoogleGenerativeAI(model=model_name, temperature=0)
-            response = llm.invoke(messages)
+            if isinstance(prompt, list):
+                response = llm.invoke(prompt)
+            else:
+                response = llm.invoke([{"role": "user", "content": str(prompt)}])
         elif model_info.provider == ModelProvider.OPENAI:
             llm = ChatOpenAI(model=model_name, temperature=0)
-            response = llm.invoke(messages)
+            if isinstance(prompt, list):
+                response = llm.invoke(prompt)
+            else:
+                response = llm.invoke([HumanMessage(content=str(prompt))])
         else:
             print(f"DEBUG: Unsupported model provider: {model_info.provider}")
             return create_default_response(pydantic_model)
