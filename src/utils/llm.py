@@ -26,7 +26,7 @@ def call_llm(
     print(f"DEBUG: OpenAI API Key = {'Set' if os.getenv('OPENAI_API_KEY') else 'Not Set'}")
     print(f"DEBUG: Pydantic Model = {pydantic_model.__name__}")
     print(f"DEBUG: Prompt = {prompt}")  # Print the entire prompt
-    from llm.models import get_model_info
+    from llm.models import get_model_info, ModelProvider
     from langchain_google_genai import ChatGoogleGenerativeAI
 
     model_info = get_model_info(model_name)
