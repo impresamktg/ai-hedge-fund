@@ -42,10 +42,11 @@ def call_llm(
 
         for _ in range(3):  # Try up to 3 times
             try:
+                print("\nDEBUG: Attempting LLM call...")
                 response = llm.invoke(messages)
-                print(f"\nDEBUG: Raw Response Content = {response.content}")
+                print(f"DEBUG: Raw Response Content = {response.content}")
+                
                 if isinstance(response.content, str):
-                    # Clean up any potential markdown formatting
                     content = response.content.strip()
                     if content.startswith("```json"):
                         content = content[7:]
@@ -53,17 +54,28 @@ def call_llm(
                         content = content[:-3]
                     content = content.strip()
                     print(f"DEBUG: Cleaned Content = {content}")
-                    result = json.loads(content)
-                    print(f"DEBUG: Parsed JSON = {result}")
+                    
+                    try:
+                        result = json.loads(content)
+                        print(f"DEBUG: Parsed JSON = {result}")
+                    except json.JSONDecodeError as je:
+                        print(f"DEBUG: JSON Parse Error: {str(je)}")
+                        print(f"DEBUG: Failed Content: {content}")
+                        continue
                 else:
                     result = response.content
                     print(f"DEBUG: Direct Content = {result}")
-                return pydantic_model.model_validate(result)
-            except json.JSONDecodeError as e:
-                print(f"DEBUG: JSON Decode Error = {str(e)}")
-                continue
+                
+                try:
+                    return pydantic_model.model_validate(result)
+                except Exception as ve:
+                    print(f"DEBUG: Validation Error: {str(ve)}")
+                    print(f"DEBUG: Invalid Data: {result}")
+                    continue
+                    
             except Exception as e:
-                print(f"DEBUG: Unexpected Error = {str(e)}")
+                print(f"DEBUG: LLM Call Error: {str(e)}")
+                print(f"DEBUG: Error Type: {type(e).__name__}")
                 continue
 
         # If we get here, all attempts failed
