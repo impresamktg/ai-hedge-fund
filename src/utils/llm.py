@@ -9,6 +9,7 @@ from utils.progress import progress
 T = TypeVar('T', bound=BaseModel)
 
 from langchain_openai import ChatOpenAI
+from langchain.schema import SystemMessage, HumanMessage
 
 def call_llm(
     prompt: str | list,
@@ -49,7 +50,11 @@ def call_llm(
         # Assuming ChatOpenAI is defined elsewhere and handles messages correctly.
         try:
             llm = ChatOpenAI(model=model_name, temperature=0) # Assumed definition
-            messages = [{"role": "system", "content": prompt_template}]
+            from langchain.schema import SystemMessage, HumanMessage
+            if isinstance(prompt, list):
+                messages = prompt  # Already formatted messages
+            else:
+                messages = [SystemMessage(content=prompt_template)]
             print("DEBUG: Created messages for LLM")
         except Exception as e:
             print(f"DEBUG: Error creating LLM messages: {str(e)}")
