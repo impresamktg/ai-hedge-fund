@@ -4,7 +4,7 @@ from dateutil.relativedelta import relativedelta
 import json
 from main import run_hedge_fund
 from utils.analysts import ANALYST_ORDER
-from llm.models import LLM_ORDER
+from llm.models import LLM_ORDER, get_model_info
 from backtester import Backtester
 
 app = Flask(__name__, template_folder='templates')
