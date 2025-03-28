@@ -22,7 +22,7 @@ def call_llm(
     print(f"DEBUG: Agent Name = {agent_name}")
     print(f"DEBUG: OpenAI API Key = {'Set' if os.getenv('OPENAI_API_KEY') else 'Not Set'}")
     print(f"DEBUG: Pydantic Model = {pydantic_model.__name__}")
-    print(f"DEBUG: Prompt = {prompt[:200]}...")  # Print first 200 chars of prompt
+    print(f"DEBUG: Prompt = {prompt}")  # Print the entire prompt
     from llm.models import get_model, get_model_info
 
     model_info = get_model_info(model_name)
@@ -53,11 +53,13 @@ def call_llm(
             print(f"DEBUG: Error creating LLM messages: {str(e)}")
             return create_default_response(pydantic_model)
 
-        for _ in range(3):  # Try up to 3 times
+        for attempt in range(3):  # Try up to 3 times
             try:
+                print(f"\nDEBUG: Attempt {attempt + 1}")
                 print("\nDEBUG: Attempting LLM call...")
                 response = llm.invoke(messages)
-                print(f"DEBUG: Raw Response Content = {response.content}")
+                print(f"\nDEBUG: Raw Response Content = {response.content}")
+                print(f"DEBUG: Response Type = {type(response.content)}")
 
                 if isinstance(response.content, str):
                     content = response.content.strip()
