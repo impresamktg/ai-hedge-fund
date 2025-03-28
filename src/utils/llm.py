@@ -31,6 +31,8 @@ def call_llm(
 
     model_info = get_model_info(model_name)
     try:
+        messages = prompt if isinstance(prompt, list) else [HumanMessage(content=prompt)]
+        
         if model_info.provider == ModelProvider.GEMINI:
             llm = ChatGoogleGenerativeAI(model=model_name, temperature=0)
         elif model_info.provider == ModelProvider.OPENAI:
