@@ -50,8 +50,8 @@ def analyze():
             portfolio=portfolio,
             show_reasoning=True,
             selected_analysts=selected_analysts,
-            model_name="gpt-4", #Updated model selection
-            model_provider="OpenAI"
+            model_name=model_choice,
+            model_provider=get_model_info(model_choice).provider.value if get_model_info(model_choice) else "OpenAI"
         )
         return jsonify(result)
     except Exception as e:
@@ -69,8 +69,8 @@ def run_backtest():
             start_date=data['start_date'],
             end_date=data['end_date'],
             initial_capital=float(data.get('initial_capital', 100000)),
-            model_name="gpt-4", #Updated model selection
-            model_provider="OpenAI",
+            model_name=model_choice,
+            model_provider=get_model_info(model_choice).provider.value if get_model_info(model_choice) else "OpenAI",
             selected_analysts=data['analysts'],
             initial_margin_requirement=float(data.get('margin_requirement', 0.0))
         )
